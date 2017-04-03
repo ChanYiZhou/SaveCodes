@@ -7,7 +7,7 @@ set runhour = $argv[2] # 02 or 14
 set periods = $argv[3] # forecaset hour length
 set simulen = $argv[4] # total simulate day length
 
-set WRFROOT = /home-gs/users/nsgs121_QXJ/chenjm
+set WRFROOT = /gza/g5/fengdx/WRF2
 set WRFDIR = ${WRFROOT}/WRFV3/run
 set METDIR = ${WRFROOT}/WPS
 set WRFOUTDIR = ${WRFROOT}/Outputs/YN_${simulen}days
@@ -211,22 +211,23 @@ while ( $n <= $len )
 end
 
 
-# rm -rf rsl.error.* rsl.out.* wrfbdy* wrfinput*
+rm -rf rsl.error.* rsl.out.* wrfbdy* wrfinput*
 # mpiexec -n 60 ./real.exe
 # mpiexec -n 72 ./wrf.exe
 
-set SuccessFlag = " "
+set SuccessFlag = "llq: There is currently no job status to report"
 
 #=== submit and check real work
-bsub real.lsf >> realJobId.log
-set realJobId = `cat realJobId.log | tail -1 | cut -c 6-12`
+echo "llsubmit real.cmd"
+set llsub= `llsubmit real.cmd`
+set realJobId = `echo $llsub | cut -d\" -f2`
 echo "realJobId: $realJobId"
-set realStat = "EXIT"
+set realStat = " "
 @ i = 0
 while ( $realStat != $SuccessFlag )
-    set realStat = `bjobs | grep $realJobId | cut -d ' ' -f 3`
+    set realStat = "`llq  $jobid -X cl_cmb`"
     echo "sleep 1 minters"
-    sleep 60
+    sleep 30
     @ i++
 end
 echo "---------------------------------------"
@@ -235,29 +236,51 @@ echo "---------------------------------------"
 
 
 #  === submit and check wrf work
-bsub wrf.lsf >> wrfJobId.log
-set wrfJobId = `cat wrfJobId.log | tail -1 | cut -c 6-12`
+echo "llsubmit wrf.cmd"
+set llsub= `llsubmit real.cmd`
+set wrfJobId = `echo $llsub | cut -d\" -f2`
 echo "wrfJobId: $wrfJobId"
-set wrfStat = "EXIT"
+set wrfStat = " "
 @ i = 0
 while ( $wrfStat != $SuccessFlag )
-    set wrfStat = `bjobs | grep $wrfJobId | cut -d ' ' -f 3`
+    set wrfStat = "`llq  $jobid -X cl_cmb`"
     echo "sleep 1 minters"
-    sleep 60
+    sleep 30
     @ i++
 end
+
 echo "---------------------------------------"
 echo " wrf work done  successfully!"
 echo "---------------------------------------"
 
 # === copy the wrf result to the specify directory
-set wrfout_name = wrfout_d0*_${syyyy}-${smm}-${sdd}_${shh}:00:00
-if ( -f $wrfout_name ) then
-    cp $wrfout_name $WRFOUTDIR/$rundate$runhour
-    exit 0
-else
-    echo "Program wrf.exe running error, exiting..."
-    exit 1
-endif
+cp wrfout_d0*_${syyyy}-${smm}-${sdd}_${shh}* $WRFOUTDIR/$rundate$utchour
+
+echo "--------------------------------------------------"
+echo " $rundate$runhour wrf work done  successfully!"
+echo "--------------------------------------------------"
+exit 0
+
+# bsub wrf.lsf >> wrfJobId.log
+# set wrfJobId = `cat wrfJobId.log | tail -1 | cut -c 6-12`
+# echo "wrfJobId: $wrfJobId"
+# set wrfStat = "EXIT"
+# @ i = 0
+# while ( $wrfStat != $SuccessFlag )
+#     set wrfStat = `bjobs | grep $wrfJobId | cut -d ' ' -f 3`
+#     echo "sleep 1 minters"
+#     sleep 60
+#     @ i++
+# end
+
+# # === copy the wrf result to the specify directory
+# set wrfout_name = wrfout_d0*_${syyyy}-${smm}-${sdd}_${shh}:00:00
+# if ( -f $wrfout_name ) then
+#     cp $wrfout_name $WRFOUTDIR/$rundate$runhour
+#     exit 0
+# else
+#     echo "Program wrf.exe running error, exiting..."
+#     exit 1
+# endif
 
 
